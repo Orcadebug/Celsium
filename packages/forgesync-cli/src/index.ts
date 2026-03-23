@@ -1,4 +1,5 @@
 #!/usr/bin/env node
+import { spawn } from "node:child_process";
 import { randomUUID } from "node:crypto";
 import fs from "node:fs/promises";
 import os from "node:os";
@@ -253,9 +254,75 @@ program
 program
   .command("run")
   .argument("<agent>")
-  .description("Run wrapped agent session")
-  .action((agent) => {
-    console.log(`run ${agent}: TODO`);
+  .requiredOption("--cmd <command>", "command to execute")
+  .option("--branch <branch>", "working branch")
+  .option("--task <task>", "task summary")
+  .description("Run a command wrapped in a ForgeSync session lifecycle")
+  .action(async (agent: string, options: { cmd: string; branch?: string; task?: string }) => {
+    const repoRoot = resolveRepoRoot();
+    const config = await readRequiredConfig(repoRoot);
+    const state = await readState(repoRoot);
+
+    const session: SessionRecord = {
+      id: randomUUID(),
+      agent,
+      branch: options.branch,
+      task: options.task,
+      startedAt: new Date().toISOString(),
+      status: "active",
+    };
+
+    state.sessions.push(session);
+    await writeState(repoRoot, state);
+
+    const client = new ForgeSyncApiClient(config.apiBaseUrl);
+    try {
+      await client.startSession({
+        project_id: config.projectId,
+        agent_id: session.agent,
+        run_id: session.id,
+        branch: session.branch,
+        task: session.task,
+      });
+    } catch (error) {
+      console.warn(`[forgesync] warning: could not sync run-start to remote API: ${(error as Error).message}`);
+    }
+
+    console.log(`Session started: ${session.id}`);
+    console.log(`Agent: ${session.agent}`);
+    if (session.branch) console.log(`Branch: ${session.branch}`);
+    if (session.task) console.log(`Task: ${session.task}`);
+    console.log(`Running command: ${options.cmd}`);
+
+    let exitCode = 0;
+    try {
+      exitCode = await new Promise<number>((resolve, reject) => {
+        const child = spawn(options.cmd, {
+          cwd: repoRoot,
+          stdio: "inherit",
+          shell: true,
+        });
+
+        child.on("error", reject);
+        child.on("exit", (code) => resolve(code ?? 1));
+      });
+    } finally {
+      session.status = "ended";
+      session.endedAt = new Date().toISOString();
+      await writeState(repoRoot, state);
+
+      try {
+        await client.endSession({ project_id: config.projectId, session_id: session.id });
+      } catch (error) {
+        console.warn(`[forgesync] warning: could not sync run-end to remote API: ${(error as Error).message}`);
+      }
+
+      console.log(`Session ended: ${session.id}`);
+    }
+
+    if (exitCode !== 0) {
+      throw new Error(`Wrapped command failed with exit code ${exitCode}`);
+    }
   });
 
 program
