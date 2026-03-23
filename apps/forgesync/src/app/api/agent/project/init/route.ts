@@ -4,25 +4,21 @@ export async function POST(req: Request) {
   try {
     requireAgentAuth(req);
     const body = await readJsonObject(req);
-    const agentId = requireString(body, "agent_id");
-    const runId = optionalString(body, "run_id");
+
+    const projectId = requireString(body, "projectId");
+    const repositoryRoot = requireString(body, "repositoryRoot");
+    const createdAt = requireString(body, "createdAt");
+    const apiBaseUrl = optionalString(body, "apiBaseUrl");
 
     return ok({
       ok: true,
-      session_id: crypto.randomUUID(),
+      project_id: projectId,
+      linked: true,
       received: {
-        agent_id: agentId,
-        run_id: runId
+        repository_root: repositoryRoot,
+        created_at: createdAt,
+        api_base_url: apiBaseUrl,
       },
-      context: {
-        recent_decisions: [],
-        relevant_memory: [],
-        active_sessions: [],
-        locked_files: [],
-        open_tasks: [],
-        constraints: [],
-        patterns: []
-      }
     });
   } catch (error) {
     if (error instanceof ValidationError) {

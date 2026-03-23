@@ -29,8 +29,9 @@ type ForgeSyncState = {
 };
 
 type ApiSessionStartInput = {
-  projectId: string;
-  agent: string;
+  project_id: string;
+  agent_id: string;
+  run_id?: string;
   branch?: string;
   task?: string;
 };
@@ -51,9 +52,15 @@ class ForgeSyncApiClient {
       return null;
     }
 
+    const agentToken = process.env.FORGESYNC_AGENT_API_TOKEN;
+    const headers: Record<string, string> = { "content-type": "application/json" };
+    if (agentToken) {
+      headers["x-forgesync-token"] = agentToken;
+    }
+
     const response = await fetch(new URL(endpoint, this.apiBaseUrl), {
       method: "POST",
-      headers: { "content-type": "application/json" },
+      headers,
       body: JSON.stringify(payload),
     });
 
@@ -76,7 +83,7 @@ class ForgeSyncApiClient {
     await this.post("/api/agent/session/start", input);
   }
 
-  async endSession(input: { projectId: string; sessionId: string }): Promise<void> {
+  async endSession(input: { project_id: string; session_id: string }): Promise<void> {
     await this.post("/api/agent/session/end", input);
   }
 }
@@ -195,8 +202,9 @@ program
     const client = new ForgeSyncApiClient(config.apiBaseUrl);
     try {
       await client.startSession({
-        projectId: config.projectId,
-        agent: session.agent,
+        project_id: config.projectId,
+        agent_id: session.agent,
+        run_id: session.id,
         branch: session.branch,
         task: session.task,
       });
@@ -234,7 +242,7 @@ program
 
     const client = new ForgeSyncApiClient(config.apiBaseUrl);
     try {
-      await client.endSession({ projectId: config.projectId, sessionId: target.id });
+      await client.endSession({ project_id: config.projectId, session_id: target.id });
     } catch (error) {
       console.warn(`[forgesync] warning: could not sync end to remote API: ${(error as Error).message}`);
     }

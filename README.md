@@ -49,7 +49,12 @@ When configured, `init/start/end` attempt POST calls to:
 
 Remote failures are non-fatal so local workflow keeps working offline.
 
-## Next External Connections Required
-- Supabase project credentials
-- Vercel project/token
-- Gemini API key for embeddings
+## External Connections Status
+- Supabase credentials configured (service role for backend operations)
+- Vercel project linked (`forgesync`)
+- Gemini API key configured
+
+### Notes
+- Anon access to PostgREST is intentionally blocked by current RLS/permissions hardening.
+- Use service role key for backend API paths until explicit anon/authenticated policies are introduced.
+- Recommended Gemini model: `gemini-2.5-flash`.

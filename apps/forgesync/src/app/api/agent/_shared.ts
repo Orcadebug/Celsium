@@ -54,3 +54,21 @@ export function optionalString(body: Record<string, unknown>, key: string): stri
 
   return value;
 }
+
+export function requireAgentAuth(req: Request) {
+  const configuredToken = process.env.FORGESYNC_AGENT_API_TOKEN;
+
+  if (!configuredToken) {
+    return;
+  }
+
+  const authHeader = req.headers.get("authorization") ?? "";
+  const bearer = authHeader.toLowerCase().startsWith("bearer ")
+    ? authHeader.slice(7).trim()
+    : "";
+  const token = bearer || req.headers.get("x-forgesync-token")?.trim() || "";
+
+  if (token !== configuredToken) {
+    throw new ValidationError("Unauthorized agent request.");
+  }
+}
