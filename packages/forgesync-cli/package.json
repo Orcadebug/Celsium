@@ -1,10 +1,18 @@
 {
   "name": "forgesync",
   "version": "0.1.0",
+  "description": "CLI for ForgeSync — unified context layer for AI coding agents. Session management, shared memory, file locks, and semantic search.",
   "type": "module",
+  "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/Orcadebug/Celsium"
+  },
+  "keywords": ["ai", "agent", "forgesync", "context", "memory", "cli", "coordination"],
   "bin": {
     "forgesync": "dist/index.js"
   },
+  "files": ["dist"],
   "scripts": {
     "build": "tsc -p tsconfig.json",
     "dev": "tsx src/index.ts"

@@ -1,3 +1,4 @@
+import { getSupabase } from "../../_supabase";
 import { ValidationError, badRequest, ok, optionalString, readJsonObject, requireAgentAuth, requireString } from "../../_shared";
 
 export async function POST(req: Request) {
@@ -9,6 +10,16 @@ export async function POST(req: Request) {
     const repositoryRoot = requireString(body, "repositoryRoot");
     const createdAt = requireString(body, "createdAt");
     const apiBaseUrl = optionalString(body, "apiBaseUrl");
+
+    const db = getSupabase();
+    const { error } = await db.from("projects").upsert(
+      { id: projectId, name: repositoryRoot, repo_url: repositoryRoot, created_at: createdAt },
+      { onConflict: "id" }
+    );
+
+    if (error) {
+      return badRequest(`DB error: ${error.message}`);
+    }
 
     return ok({
       ok: true,
