@@ -1,8 +1,30 @@
 import { getSupabase } from "./_supabase";
 import { generateSummary } from "./_summarize";
+import { sanitizeForPrompt } from "@/lib/sanitize";
+import { logger } from "@/lib/logger";
 
-const EMBEDDING_MODEL = "text-embedding-004";
+const EMBEDDING_MODEL = "gemini-embedding-001";
 const EMBEDDING_DIMS = 768;
+
+// ---------------------------------------------------------------------------
+// Gemini API rate limiter (sliding window)
+// ---------------------------------------------------------------------------
+const GEMINI_RATE_LIMIT = { maxRequests: 30, windowMs: 60_000 };
+let geminiCallTimestamps: number[] = [];
+
+function canCallGemini(): boolean {
+  const now = Date.now();
+  geminiCallTimestamps = geminiCallTimestamps.filter(t => now - t < GEMINI_RATE_LIMIT.windowMs);
+  if (geminiCallTimestamps.length >= GEMINI_RATE_LIMIT.maxRequests) return false;
+  geminiCallTimestamps.push(now);
+  return true;
+}
+
+export async function waitForGeminiSlot(): Promise<void> {
+  while (!canCallGemini()) {
+    await new Promise(r => setTimeout(r, 2000));
+  }
+}
 
 export type EmbeddingTaskType = "RETRIEVAL_DOCUMENT" | "RETRIEVAL_QUERY";
 
@@ -14,6 +36,8 @@ export async function generateEmbedding(
   if (!apiKey) {
     throw new Error("Missing GEMINI_API_KEY");
   }
+
+  await waitForGeminiSlot();
 
   const response = await fetch(
     `https://generativelanguage.googleapis.com/v1beta/models/${EMBEDDING_MODEL}:embedContent?key=${apiKey}`,
@@ -52,7 +76,7 @@ export async function enqueueEmbedding(
     job_type: "embedding",
   });
   if (error) {
-    console.error("[forgesync] failed to enqueue embedding:", error.message);
+    logger.error("failed to enqueue embedding", { error: error.message, target_table: targetTable, target_id: targetId });
   }
 }
 
@@ -69,7 +93,7 @@ export async function enqueueSummarize(
     job_type: "summarize",
   });
   if (error) {
-    console.error("[forgesync] failed to enqueue summarize:", error.message);
+    logger.error("failed to enqueue summarize", { error: error.message, target_id: targetId });
   }
 }
 
@@ -107,6 +131,7 @@ export async function processEmbeddingBatch(batchSize = 10): Promise<{ processed
           .eq("id", job.target_id)
           .single();
 
+        await waitForGeminiSlot();
         const summary = await generateSummary(
           job.text_to_embed,
           entry?.kind || "artifact",
@@ -130,7 +155,7 @@ export async function processEmbeddingBatch(batchSize = 10): Promise<{ processed
           .eq("id", job.id);
 
         // Enqueue phase 2: embedding (uses summary + content for better vectors)
-        const textForEmbedding = `${entry?.title || ""}\n${summary}\n${job.text_to_embed}`.slice(0, 10000);
+        const textForEmbedding = `${sanitizeForPrompt(entry?.title || "")}\n${summary}\n${sanitizeForPrompt(job.text_to_embed)}`.slice(0, 10000);
         await enqueueEmbedding("knowledge_entries", job.target_id, textForEmbedding);
 
         processed++;
@@ -167,6 +192,27 @@ export async function processEmbeddingBatch(batchSize = 10): Promise<{ processed
           last_error: (err as Error).message,
         })
         .eq("id", job.id);
+
+      if (newStatus === "failed") {
+        // Structured alert for log aggregation
+        console.error(JSON.stringify({
+          level: "error",
+          alert: true,
+          message: "Embedding job permanently failed",
+          jobId: job.id,
+          sourceTable: job.target_table,
+          sourceId: job.target_id,
+          jobType: job.job_type,
+          attempts,
+          lastError: (err as Error).message,
+          contentPreview: (job.text_to_embed || "").slice(0, 200),
+          timestamp: new Date().toISOString(),
+        }));
+      } else {
+        // Exponential backoff before the job is retried
+        const backoffMs = 1000 * Math.pow(2, attempts); // 2s, 4s, 8s
+        await new Promise(r => setTimeout(r, backoffMs));
+      }
 
       failed++;
     }

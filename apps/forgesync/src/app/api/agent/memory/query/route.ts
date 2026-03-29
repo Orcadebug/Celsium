@@ -1,10 +1,10 @@
 import { getSupabase } from "../../_supabase";
 import { generateEmbedding } from "../../_embeddings";
-import { ValidationError, badRequest, ok, requireAgentAuth } from "../../_shared";
+import { RateLimitError, ValidationError, badRequest, ok, requireAgentAuth } from "../../_shared";
 
 export async function GET(req: Request) {
   try {
-    requireAgentAuth(req);
+    await requireAgentAuth(req);
 
     const { searchParams } = new URL(req.url);
     const q = searchParams.get("q");
@@ -58,6 +58,9 @@ export async function GET(req: Request) {
 
     return ok({ ok: true, query: { session_id: sessionId, project_id: projectId }, results: data || [] });
   } catch (error) {
+    if (error instanceof RateLimitError) {
+      return error.response;
+    }
     if (error instanceof ValidationError) {
       return badRequest(error.message);
     }

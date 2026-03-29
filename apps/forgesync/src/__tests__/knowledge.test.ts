@@ -20,7 +20,7 @@ import { POST } from "../app/api/agent/knowledge/route";
 
 describe("POST /api/agent/knowledge", () => {
   beforeEach(() => {
-    delete process.env.FORGESYNC_AGENT_API_TOKEN;
+    process.env.FORGESYNC_AGENT_API_TOKEN = "test-secret-token";
   });
 
   it("returns 200 with summary_pending for artifact", async () => {
@@ -40,7 +40,7 @@ describe("POST /api/agent/knowledge", () => {
   });
 
   it("accepts all valid kinds", async () => {
-    for (const kind of ["memory", "decision", "cot", "artifact"]) {
+    for (const kind of ["memory", "decision", "cot", "artifact", "intent", "file"]) {
       const req = mockPostRequest({
         session_id: "s1",
         kind,

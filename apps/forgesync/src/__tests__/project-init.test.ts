@@ -14,7 +14,7 @@ import { POST } from "../app/api/agent/project/init/route";
 
 describe("POST /api/agent/project/init", () => {
   beforeEach(() => {
-    delete process.env.FORGESYNC_AGENT_API_TOKEN;
+    process.env.FORGESYNC_AGENT_API_TOKEN = "test-secret-token";
   });
 
   it("returns 200 with project linked", async () => {

@@ -19,7 +19,7 @@ import { GET, PUT } from "../app/api/agent/project/dna/route";
 
 describe("/api/agent/project/dna", () => {
   beforeEach(() => {
-    delete process.env.FORGESYNC_AGENT_API_TOKEN;
+    process.env.FORGESYNC_AGENT_API_TOKEN = "test-secret-token";
   });
 
   describe("GET", () => {

@@ -1,12 +1,16 @@
 import { NextResponse } from "next/server";
 import { getSupabase } from "../_supabase";
-import { ValidationError, badRequest, ok, optionalString, readJsonObject, requireAgentAuth, requireString } from "../_shared";
+import { ValidationError, badRequest, ok, optionalString, readJsonObject, requireAgentAuth, requireString, logger, logAudit, extractClientIp, extractTokenHint } from "../_shared";
 
 const DEFAULT_TTL_MIN = 30;
 
 export async function POST(req: Request) {
+  const start = Date.now();
+  const ip = extractClientIp(req);
+  const tokenHint = extractTokenHint(req);
+
   try {
-    requireAgentAuth(req);
+    await requireAgentAuth(req);
     const body = await readJsonObject(req);
     const sessionId = requireString(body, "session_id");
     const resource = requireString(body, "resource");
@@ -30,7 +34,12 @@ export async function POST(req: Request) {
 
     if (existing && existing.length > 0) {
       const holder = existing[0];
+      if (!holder) {
+        return badRequest("Lock holder could not be resolved.");
+      }
       if (holder.session_id !== sessionId) {
+        logger.warn("lock conflict", { resource, session_id: sessionId, held_by: holder.session_id, project_id: projectId });
+        logAudit({ action: "lock.acquire", session_id: sessionId, project_id: projectId, resource, ip, token_hint: tokenHint, status: "failure", error: `locked by session ${holder.session_id}`, duration_ms: Date.now() - start });
         return NextResponse.json(
           { ok: false, error: `Resource '${resource}' is locked by session ${holder.session_id}` },
           { status: 409 }
@@ -52,11 +61,17 @@ export async function POST(req: Request) {
     );
 
     if (error) {
+      logAudit({ action: "lock.acquire", session_id: sessionId, project_id: projectId, resource, ip, token_hint: tokenHint, status: "failure", error: error.message, duration_ms: Date.now() - start });
       return badRequest(`DB error: ${error.message}`);
     }
 
+    logger.info("lock acquired", { session_id: sessionId, resource, project_id: projectId, ttl_min: DEFAULT_TTL_MIN });
+    logAudit({ action: "lock.acquire", session_id: sessionId, project_id: projectId, resource, ip, token_hint: tokenHint, status: "success", duration_ms: Date.now() - start });
+
     return ok({ ok: true, type: "lock", session_id: sessionId, resource, ttl_min: DEFAULT_TTL_MIN });
   } catch (error) {
+    logAudit({ action: "lock.acquire", ip, token_hint: tokenHint, status: "failure", error: (error as Error).message, duration_ms: Date.now() - start });
+
     if (error instanceof ValidationError) {
       return badRequest(error.message);
     }

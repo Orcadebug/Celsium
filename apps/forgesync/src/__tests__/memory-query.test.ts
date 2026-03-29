@@ -28,7 +28,7 @@ import { GET } from "../app/api/agent/memory/query/route";
 
 describe("GET /api/agent/memory/query", () => {
   beforeEach(() => {
-    delete process.env.FORGESYNC_AGENT_API_TOKEN;
+    process.env.FORGESYNC_AGENT_API_TOKEN = "test-secret-token";
   });
 
   it("returns results for text query", async () => {

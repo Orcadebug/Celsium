@@ -1,10 +1,10 @@
 import { NextResponse } from "next/server";
 import { getSupabase } from "../../_supabase";
-import { ValidationError, badRequest, ok, readJsonObject, requireAgentAuth, requireString } from "../../_shared";
+import { RateLimitError, ValidationError, badRequest, ok, readJsonObject, requireAgentAuth, requireString } from "../../_shared";
 
 export async function POST(req: Request) {
   try {
-    requireAgentAuth(req);
+    await requireAgentAuth(req);
     const body = await readJsonObject(req);
     const sessionId = requireString(body, "session_id");
     const taskId = requireString(body, "task_id");
@@ -40,6 +40,9 @@ export async function POST(req: Request) {
 
     return ok({ ok: true, type: "task_claim", session_id: sessionId, task_id: taskId });
   } catch (error) {
+    if (error instanceof RateLimitError) {
+      return error.response;
+    }
     if (error instanceof ValidationError) {
       return badRequest(error.message);
     }

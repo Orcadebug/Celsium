@@ -22,7 +22,7 @@ import { GET } from "../app/api/agent/knowledge/query/route";
 
 describe("GET /api/agent/knowledge/query", () => {
   beforeEach(() => {
-    delete process.env.FORGESYNC_AGENT_API_TOKEN;
+    process.env.FORGESYNC_AGENT_API_TOKEN = "test-secret-token";
   });
 
   it("returns 200 with search results", async () => {

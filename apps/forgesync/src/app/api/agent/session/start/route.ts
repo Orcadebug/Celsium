@@ -1,10 +1,14 @@
 import { getSupabase } from "../../_supabase";
 import { generateEmbedding } from "../../_embeddings";
-import { ValidationError, badRequest, ok, optionalString, readJsonObject, requireAgentAuth, requireString } from "../../_shared";
+import { RateLimitError, ValidationError, badRequest, ok, optionalString, readJsonObject, requireAgentAuth, requireString, logger, logAudit, extractClientIp, extractTokenHint } from "../../_shared";
 
 export async function POST(req: Request) {
+  const start = Date.now();
+  const ip = extractClientIp(req);
+  const tokenHint = extractTokenHint(req);
+
   try {
-    requireAgentAuth(req);
+    await requireAgentAuth(req);
     const body = await readJsonObject(req);
     const agentId = requireString(body, "agent_id");
     const runId = optionalString(body, "run_id");
@@ -19,6 +23,7 @@ export async function POST(req: Request) {
       .insert({
         project_id: projectId || null,
         agent_id: null,
+        agent_name: agentId,
         intent,
         status: "active",
       })
@@ -26,8 +31,11 @@ export async function POST(req: Request) {
       .single();
 
     if (sessionError) {
+      logAudit({ action: "session.start", agent_id: agentId, project_id: projectId, ip, token_hint: tokenHint, status: "failure", error: sessionError.message, duration_ms: Date.now() - start });
       return badRequest(`DB error: ${sessionError.message}`);
     }
+
+    logger.info("session started", { session_id: session.id, agent_id: agentId, project_id: projectId });
 
     // Hydrate context from all layers
     let projectDna = {};
@@ -73,10 +81,12 @@ export async function POST(req: Request) {
 
           relevantKnowledge = knowledgeResult || [];
         } catch (err) {
-          console.warn("[forgesync] semantic search failed, returning empty context:", (err as Error).message);
+          logger.warn("semantic search failed, returning empty context", { error: (err as Error).message, project_id: projectId });
         }
       }
     }
+
+    logAudit({ action: "session.start", agent_id: agentId, session_id: session.id, project_id: projectId, ip, token_hint: tokenHint, status: "success", duration_ms: Date.now() - start });
 
     return ok({
       ok: true,
@@ -91,6 +101,11 @@ export async function POST(req: Request) {
       },
     });
   } catch (error) {
+    logAudit({ action: "session.start", ip, token_hint: tokenHint, status: "failure", error: (error as Error).message, duration_ms: Date.now() - start });
+
+    if (error instanceof RateLimitError) {
+      return error.response;
+    }
     if (error instanceof ValidationError) {
       return badRequest(error.message);
     }

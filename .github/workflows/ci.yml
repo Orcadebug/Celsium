@@ -16,5 +16,19 @@ jobs:
           node-version: 20
           cache: npm
       - run: npm ci
+
+      - name: Type check (web app)
+        run: npx tsc --noEmit --project apps/forgesync/tsconfig.json
+
+      - name: Type check (CLI)
+        run: npx tsc --noEmit --project packages/forgesync-cli/tsconfig.json
+
+      - name: Lint
+        run: npm run lint
+
+      - name: Security audit
+        run: npm audit --audit-level=high
+        continue-on-error: true
+
       - run: npx --workspace apps/forgesync vitest run
       - run: npm --workspace packages/forgesync-cli run build

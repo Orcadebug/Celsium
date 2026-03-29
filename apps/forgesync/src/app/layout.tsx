@@ -2,7 +2,7 @@ import type { ReactNode } from "react";
 
 export const metadata = {
   title: "ForgeSync",
-  description: "AI-native software coordination platform scaffold"
+  description: "Hosted context repos and coordination APIs for AI coding agents",
 };
 
 export default function RootLayout({ children }: { children: ReactNode }) {

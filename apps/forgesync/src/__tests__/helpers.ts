@@ -1,10 +1,18 @@
 import { vi } from "vitest";
 
+/** Shared test token — must match FORGESYNC_AGENT_API_TOKEN env var set in tests */
+export const TEST_TOKEN = "test-secret-token";
+
+/** Default auth headers used by all mock request helpers */
+const authHeaders = (): Record<string, string> => ({
+  "x-forgesync-token": TEST_TOKEN,
+});
+
 /**
  * Build a mock Request with JSON body for testing POST route handlers.
  */
 export function mockPostRequest(body: unknown, headers?: Record<string, string>): Request {
-  const h = new Headers({ "content-type": "application/json", ...headers });
+  const h = new Headers({ "content-type": "application/json", ...authHeaders(), ...headers });
   return new Request("http://localhost:3000/api/test", {
     method: "POST",
     headers: h,
@@ -22,7 +30,7 @@ export function mockGetRequest(path: string, params?: Record<string, string>, he
       url.searchParams.set(k, v);
     }
   }
-  const h = new Headers(headers || {});
+  const h = new Headers({ ...authHeaders(), ...(headers || {}) });
   return new Request(url.toString(), { method: "GET", headers: h });
 }
 
@@ -30,7 +38,7 @@ export function mockGetRequest(path: string, params?: Record<string, string>, he
  * Build a mock PUT Request with JSON body.
  */
 export function mockPutRequest(body: unknown, headers?: Record<string, string>): Request {
-  const h = new Headers({ "content-type": "application/json", ...headers });
+  const h = new Headers({ "content-type": "application/json", ...authHeaders(), ...headers });
   return new Request("http://localhost:3000/api/test", {
     method: "PUT",
     headers: h,

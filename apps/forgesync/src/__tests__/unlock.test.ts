@@ -17,7 +17,7 @@ import { POST } from "../app/api/agent/unlock/route";
 
 describe("POST /api/agent/unlock", () => {
   beforeEach(() => {
-    delete process.env.FORGESYNC_AGENT_API_TOKEN;
+    process.env.FORGESYNC_AGENT_API_TOKEN = "test-secret-token";
   });
 
   it("returns 200 on successful unlock", async () => {

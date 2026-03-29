@@ -21,7 +21,7 @@ import { POST } from "../app/api/agent/decision/route";
 
 describe("POST /api/agent/decision", () => {
   beforeEach(() => {
-    delete process.env.FORGESYNC_AGENT_API_TOKEN;
+    process.env.FORGESYNC_AGENT_API_TOKEN = "test-secret-token";
   });
 
   it("returns 200 and enqueues embedding", async () => {

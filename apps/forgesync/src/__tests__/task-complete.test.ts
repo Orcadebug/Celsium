@@ -17,7 +17,7 @@ import { POST } from "../app/api/agent/task/complete/route";
 
 describe("POST /api/agent/task/complete", () => {
   beforeEach(() => {
-    delete process.env.FORGESYNC_AGENT_API_TOKEN;
+    process.env.FORGESYNC_AGENT_API_TOKEN = "test-secret-token";
   });
 
   it("returns 200 on completion", async () => {

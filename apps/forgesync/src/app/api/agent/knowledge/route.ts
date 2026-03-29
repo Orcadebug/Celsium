@@ -1,6 +1,7 @@
 import { getSupabase } from "../_supabase";
 import { enqueueSummarize } from "../_embeddings";
 import {
+  RateLimitError,
   ValidationError,
   badRequest,
   ok,
@@ -10,11 +11,11 @@ import {
   requireString,
 } from "../_shared";
 
-const VALID_KINDS = ["memory", "decision", "cot", "artifact"];
+const VALID_KINDS = ["memory", "decision", "cot", "artifact", "intent", "file"];
 
 export async function POST(req: Request) {
   try {
-    requireAgentAuth(req);
+    await requireAgentAuth(req);
     const body = await readJsonObject(req);
 
     const sessionId = requireString(body, "session_id");
@@ -65,6 +66,9 @@ export async function POST(req: Request) {
       summary_pending: true,
     });
   } catch (error) {
+    if (error instanceof RateLimitError) {
+      return error.response;
+    }
     if (error instanceof ValidationError) {
       return badRequest(error.message);
     }

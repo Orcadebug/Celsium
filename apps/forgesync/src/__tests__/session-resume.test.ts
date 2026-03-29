@@ -39,7 +39,7 @@ import { GET } from "../app/api/agent/session/resume/route";
 
 describe("GET /api/agent/session/resume", () => {
   beforeEach(() => {
-    delete process.env.FORGESYNC_AGENT_API_TOKEN;
+    process.env.FORGESYNC_AGENT_API_TOKEN = "test-secret-token";
   });
 
   it("returns 200 with session snapshot by session_id", async () => {

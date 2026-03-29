@@ -19,7 +19,7 @@ import { POST } from "../app/api/agent/task/claim/route";
 
 describe("POST /api/agent/task/claim", () => {
   beforeEach(() => {
-    delete process.env.FORGESYNC_AGENT_API_TOKEN;
+    process.env.FORGESYNC_AGENT_API_TOKEN = "test-secret-token";
     mockChain.single.mockResolvedValue({ data: { id: "t1", status: "open", claimed_by_session: null }, error: null });
     mockChain.eq.mockReturnThis();
     // Make the update chain resolve

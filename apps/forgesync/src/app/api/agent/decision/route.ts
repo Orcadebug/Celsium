@@ -1,11 +1,11 @@
 // DEPRECATED: Use POST /api/agent/knowledge with kind="decision" instead.
 import { getSupabase } from "../_supabase";
 import { enqueueEmbedding, enqueueSummarize } from "../_embeddings";
-import { ValidationError, badRequest, ok, optionalString, readJsonObject, requireAgentAuth, requireString } from "../_shared";
+import { RateLimitError, ValidationError, badRequest, ok, optionalString, readJsonObject, requireAgentAuth, requireString } from "../_shared";
 
 export async function POST(req: Request) {
   try {
-    requireAgentAuth(req);
+    await requireAgentAuth(req);
     const body = await readJsonObject(req);
     const sessionId = requireString(body, "session_id");
     const decision = requireString(body, "decision");
@@ -54,6 +54,9 @@ export async function POST(req: Request) {
 
     return ok({ ok: true, type: "decision", id: data.id, session_id: sessionId, decision });
   } catch (error) {
+    if (error instanceof RateLimitError) {
+      return error.response;
+    }
     if (error instanceof ValidationError) {
       return badRequest(error.message);
     }

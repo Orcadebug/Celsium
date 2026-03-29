@@ -24,7 +24,7 @@ import { GET } from "../app/api/agent/cot/query/route";
 
 describe("POST /api/agent/cot", () => {
   beforeEach(() => {
-    delete process.env.FORGESYNC_AGENT_API_TOKEN;
+    process.env.FORGESYNC_AGENT_API_TOKEN = "test-secret-token";
   });
 
   it("returns 200 with CoT saved", async () => {
@@ -56,7 +56,7 @@ describe("POST /api/agent/cot", () => {
 
 describe("GET /api/agent/cot/query", () => {
   beforeEach(() => {
-    delete process.env.FORGESYNC_AGENT_API_TOKEN;
+    process.env.FORGESYNC_AGENT_API_TOKEN = "test-secret-token";
   });
 
   it("returns search results", async () => {

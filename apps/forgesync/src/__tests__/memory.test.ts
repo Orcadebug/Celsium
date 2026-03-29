@@ -21,7 +21,7 @@ import { POST } from "../app/api/agent/memory/route";
 
 describe("POST /api/agent/memory", () => {
   beforeEach(() => {
-    delete process.env.FORGESYNC_AGENT_API_TOKEN;
+    process.env.FORGESYNC_AGENT_API_TOKEN = "test-secret-token";
   });
 
   it("returns 200 with saved=true", async () => {

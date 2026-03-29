@@ -9,6 +9,8 @@
   "scripts": {
     "dev:web": "npm --workspace apps/forgesync run dev",
     "build:web": "npm --workspace apps/forgesync run build",
-    "dev:cli": "npm --workspace packages/forgesync-cli run dev"
+    "dev:cli": "npm --workspace packages/forgesync-cli run dev",
+    "lint": "npm run lint --workspace apps/forgesync && npm run lint --workspace packages/forgesync-cli",
+    "typecheck": "npm run typecheck --workspace apps/forgesync && npx tsc --noEmit --project packages/forgesync-cli/tsconfig.json"
   }
 }

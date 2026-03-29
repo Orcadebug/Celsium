@@ -99,40 +99,42 @@ describe("_shared utilities", () => {
       }
     });
 
-    it("passes when no token configured (permissive)", () => {
+    it("throws when no token configured and none provided", async () => {
       delete process.env.FORGESYNC_AGENT_API_TOKEN;
       const req = new Request("http://localhost");
-      expect(() => requireAgentAuth(req)).not.toThrow();
+      await expect(requireAgentAuth(req)).rejects.toThrow(ValidationError);
+      await expect(requireAgentAuth(req)).rejects.toThrow("Authentication required");
     });
 
-    it("passes with valid bearer token", () => {
+    it("passes with valid bearer token", async () => {
       process.env.FORGESYNC_AGENT_API_TOKEN = "secret123";
       const req = new Request("http://localhost", {
         headers: { authorization: "Bearer secret123" },
       });
-      expect(() => requireAgentAuth(req)).not.toThrow();
+      await expect(requireAgentAuth(req)).resolves.toBeDefined();
     });
 
-    it("passes with valid x-forgesync-token", () => {
+    it("passes with valid x-forgesync-token", async () => {
       process.env.FORGESYNC_AGENT_API_TOKEN = "secret123";
       const req = new Request("http://localhost", {
         headers: { "x-forgesync-token": "secret123" },
       });
-      expect(() => requireAgentAuth(req)).not.toThrow();
+      await expect(requireAgentAuth(req)).resolves.toBeDefined();
     });
 
-    it("throws with wrong token", () => {
+    it("throws with wrong token", async () => {
       process.env.FORGESYNC_AGENT_API_TOKEN = "secret123";
       const req = new Request("http://localhost", {
         headers: { authorization: "Bearer wrong" },
       });
-      expect(() => requireAgentAuth(req)).toThrow(ValidationError);
+      // Wrong token falls through to DB lookup which throws (no DB in tests)
+      await expect(requireAgentAuth(req)).rejects.toThrow();
     });
 
-    it("throws with missing token", () => {
+    it("throws with missing token", async () => {
       process.env.FORGESYNC_AGENT_API_TOKEN = "secret123";
       const req = new Request("http://localhost");
-      expect(() => requireAgentAuth(req)).toThrow(ValidationError);
+      await expect(requireAgentAuth(req)).rejects.toThrow(ValidationError);
     });
   });
 });

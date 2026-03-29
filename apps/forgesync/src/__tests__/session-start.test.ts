@@ -25,7 +25,7 @@ import { POST } from "../app/api/agent/session/start/route";
 
 describe("POST /api/agent/session/start", () => {
   beforeEach(() => {
-    delete process.env.FORGESYNC_AGENT_API_TOKEN;
+    process.env.FORGESYNC_AGENT_API_TOKEN = "test-secret-token";
   });
 
   it("returns 200 with session_id and context", async () => {

@@ -1,9 +1,9 @@
 import { getSupabase } from "../../_supabase";
-import { ValidationError, badRequest, ok, requireAgentAuth } from "../../_shared";
+import { RateLimitError, ValidationError, badRequest, ok, requireAgentAuth } from "../../_shared";
 
 export async function GET(req: Request) {
   try {
-    requireAgentAuth(req);
+    await requireAgentAuth(req);
 
     const url = new URL(req.url);
     const sessionId = url.searchParams.get("session_id");
@@ -80,6 +80,9 @@ export async function GET(req: Request) {
       tasks: tasks || [],
     });
   } catch (error) {
+    if (error instanceof RateLimitError) {
+      return error.response;
+    }
     if (error instanceof ValidationError) {
       return badRequest(error.message);
     }

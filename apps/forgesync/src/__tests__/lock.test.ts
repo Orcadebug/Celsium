@@ -23,7 +23,7 @@ import { POST } from "../app/api/agent/lock/route";
 
 describe("POST /api/agent/lock", () => {
   beforeEach(() => {
-    delete process.env.FORGESYNC_AGENT_API_TOKEN;
+    process.env.FORGESYNC_AGENT_API_TOKEN = "test-secret-token";
     mockChain.gt.mockResolvedValue({ data: [], error: null });
     mockChain.upsert.mockResolvedValue({ error: null });
   });

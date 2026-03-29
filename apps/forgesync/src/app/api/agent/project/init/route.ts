@@ -1,9 +1,9 @@
 import { getSupabase } from "../../_supabase";
-import { ValidationError, badRequest, ok, optionalString, readJsonObject, requireAgentAuth, requireString } from "../../_shared";
+import { RateLimitError, ValidationError, badRequest, ok, optionalString, readJsonObject, requireAgentAuth, requireString } from "../../_shared";
 
 export async function POST(req: Request) {
   try {
-    requireAgentAuth(req);
+    await requireAgentAuth(req);
     const body = await readJsonObject(req);
 
     const projectId = requireString(body, "projectId");
@@ -32,6 +32,9 @@ export async function POST(req: Request) {
       },
     });
   } catch (error) {
+    if (error instanceof RateLimitError) {
+      return error.response;
+    }
     if (error instanceof ValidationError) {
       return badRequest(error.message);
     }

@@ -1,11 +1,13 @@
-# Agent API Testing Checklist
+# ForgeSync Testing Checklist
 
-Use this checklist when validating the scaffolded agent endpoints in `apps/forgesync`.
+Use this checklist when validating the current hosted ForgeSync flows in `apps/forgesync`.
 
 ## Prerequisites
 
 - Install dependencies: `npm install`
-- Build once: `npm run build:web`
+- Run typecheck: `npm run typecheck`
+- Run lint: `npm run lint`
+- Run tests: `npm --workspace apps/forgesync test -- --run`
 - Run dev server from repo root: `npm run dev:web`
 
 ## Endpoint Validation Checklist
@@ -16,16 +18,26 @@ Use this checklist when validating the scaffolded agent endpoints in `apps/forge
 - [ ] Valid payload returns HTTP `200`.
 - [ ] Invalid/missing required field returns HTTP `400` with `{ ok: false, error: string }`.
 
-### Session
+### Hosted user flows
+
+- [ ] `/login` sends a magic link successfully.
+- [ ] `/auth/callback` rejects open redirects and falls back to `/dashboard`.
+- [ ] `/dashboard` redirects unauthenticated users to `/login`.
+- [ ] Repo creation appears immediately on the dashboard.
+- [ ] `/dashboard/[projectId]` shows project name, token actions, and active sessions.
+- [ ] Browser-based CLI link flow completes and redirects to the localhost callback URL.
+
+### Agent session + knowledge APIs
 
 - [ ] `POST /api/agent/session/start` accepts `agent_id` (required) and `run_id` (optional).
 - [ ] `POST /api/agent/session/end` requires `session_id`.
 
-### Decisions and memory
+### Decisions, memory, and knowledge
 
 - [ ] `POST /api/agent/decision` requires `session_id` + `decision`.
 - [ ] `POST /api/agent/memory` requires `session_id` + `content`.
-- [ ] `GET /api/agent/memory/query` requires query param `session_id`.
+- [ ] `GET /api/agent/knowledge/query` returns unified results for supported kinds.
+- [ ] `POST /api/agent/repo/sync` accepts chunked file payloads and deleted paths.
 
 ### Task lifecycle
 
@@ -40,13 +52,15 @@ Use this checklist when validating the scaffolded agent endpoints in `apps/forge
 ## Suggested smoke tests
 
 ```bash
+curl -X POST http://localhost:3000/api/health
+
 curl -X POST http://localhost:3000/api/agent/session/start \
   -H "content-type: application/json" \
-  -d '{"agent_id":"agent-123"}'
+  -H "x-forgesync-token: ${FORGESYNC_AGENT_API_TOKEN}" \
+  -d '{"project_id":"proj-1","agent_id":"agent-123"}'
 
-curl -X POST http://localhost:3000/api/agent/task/claim \
+curl -X POST http://localhost:3000/api/agent/repo/sync \
   -H "content-type: application/json" \
-  -d '{}'
-
-curl "http://localhost:3000/api/agent/memory/query"
+  -H "x-forgesync-token: ${FORGESYNC_AGENT_API_TOKEN}" \
+  -d '{"project_id":"proj-1","session_id":"session-1","files":[],"deleted_paths":[]}'
 ```

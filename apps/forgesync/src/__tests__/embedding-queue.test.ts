@@ -44,8 +44,8 @@ describe("embedding pipeline", () => {
       expect(result.length).toBe(768);
 
       const call = mockFetch.mock.calls[0];
-      expect(call[0]).toContain("text-embedding-004");
-      const body = JSON.parse(call[1].body);
+      expect(call?.[0]).toContain("gemini-embedding-001");
+      const body = JSON.parse(String(call?.[1]?.body));
       expect(body.taskType).toBe("RETRIEVAL_DOCUMENT");
     });
 
@@ -57,7 +57,7 @@ describe("embedding pipeline", () => {
 
       await generateEmbedding("search query", "RETRIEVAL_QUERY");
 
-      const body = JSON.parse(mockFetch.mock.calls[0][1].body);
+      const body = JSON.parse(String(mockFetch.mock.calls[0]?.[1]?.body));
       expect(body.taskType).toBe("RETRIEVAL_QUERY");
     });
 

@@ -1,10 +1,10 @@
 import { getSupabase } from "../../_supabase";
 import { generateEmbedding } from "../../_embeddings";
-import { ValidationError, badRequest, ok, requireAgentAuth } from "../../_shared";
+import { RateLimitError, ValidationError, badRequest, ok, requireAgentAuth } from "../../_shared";
 
 export async function GET(req: Request) {
   try {
-    requireAgentAuth(req);
+    await requireAgentAuth(req);
 
     const { searchParams } = new URL(req.url);
     const q = searchParams.get("q");
@@ -35,6 +35,9 @@ export async function GET(req: Request) {
       return badRequest(`Embedding error: ${(err as Error).message}`);
     }
   } catch (error) {
+    if (error instanceof RateLimitError) {
+      return error.response;
+    }
     if (error instanceof ValidationError) {
       return badRequest(error.message);
     }

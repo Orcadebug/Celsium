@@ -1,9 +1,9 @@
 import { getSupabase } from "../../_supabase";
-import { ValidationError, badRequest, ok, readJsonObject, requireAgentAuth, requireString } from "../../_shared";
+import { RateLimitError, ValidationError, badRequest, ok, readJsonObject, requireAgentAuth, requireString } from "../../_shared";
 
 export async function GET(req: Request) {
   try {
-    requireAgentAuth(req);
+    await requireAgentAuth(req);
 
     const { searchParams } = new URL(req.url);
     const projectId = searchParams.get("project_id");
@@ -25,6 +25,9 @@ export async function GET(req: Request) {
 
     return ok({ ok: true, project_id: projectId, dna: data?.dna || {} });
   } catch (error) {
+    if (error instanceof RateLimitError) {
+      return error.response;
+    }
     if (error instanceof ValidationError) {
       return badRequest(error.message);
     }
@@ -35,7 +38,7 @@ export async function GET(req: Request) {
 
 export async function PUT(req: Request) {
   try {
-    requireAgentAuth(req);
+    await requireAgentAuth(req);
     const body = await readJsonObject(req);
     const projectId = requireString(body, "project_id");
     const dna = body.dna;
@@ -56,6 +59,9 @@ export async function PUT(req: Request) {
 
     return ok({ ok: true, project_id: projectId, dna, updated: true });
   } catch (error) {
+    if (error instanceof RateLimitError) {
+      return error.response;
+    }
     if (error instanceof ValidationError) {
       return badRequest(error.message);
     }
